@@ -123,7 +123,35 @@ class AuthController {
   }
 
   async resetPassword(req, res) {
-    return res.send({ route: 'resetPassword' });
+    const { email, token, password } = req.body;
+
+    try {
+      const user = await User.findOne({ email }).select(
+        '+passwordResetToken passwordResetExpires',
+      );
+
+      if (!user) return res.status(400).send({ error: 'User not found.' });
+
+      if (token !== user.passwordResetToken)
+        return res.status(400).send({ error: 'Token invalid.' });
+
+      const now = new Date();
+
+      if (now > user.passwordResetExpires)
+        return res
+          .status(400)
+          .send({ error: 'Token expired, generate a new one' });
+
+      user.password = await bcrypt.hash(password, 10);
+
+      await user.save();
+
+      return res.send();
+    } catch (err) {
+      return res
+        .status(400)
+        .send({ error: 'Cannot reset password, try again.' });
+    }
   }
 }
 
