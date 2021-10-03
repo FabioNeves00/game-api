@@ -51,7 +51,38 @@ class AuthController {
   }
 
   async authenticate(req, res) {
-    return res.send({ route: 'authenticate' });
+    const { email, password } = req.body;
+    const validator = validationResult(req);
+
+    try {
+      if (validator.errors.length) {
+        const errors = [];
+
+        // eslint-disable-next-line no-restricted-syntax
+        for (const error of validator.errors) {
+          errors.push(`This ${error.param} is invalid.`);
+        }
+
+        // Este filtro eu coloquei pra corrigir um erro de return
+        // Caso saiba como solucionar,pf deixe uma msg pra mim t-t. Obg
+        return res.status(400).send({
+          error: errors.filter((item, pos) => errors.indexOf(item) === pos),
+        });
+      }
+
+      const user = await User.findOne({ email }).select('+password');
+
+      if (!user) return res.status(404).send({ error: 'User not found.' });
+
+      if (!(await bcrypt.compare(password, user.password)))
+        return res.status(400).send({ error: 'This password is incorrect.' });
+
+      user.password = undefined;
+
+      return res.send({ user, token: generateToken({ id: user.id }) });
+    } catch (err) {
+      return undefined;
+    }
   }
 
   async forgotPassword(req, res) {
