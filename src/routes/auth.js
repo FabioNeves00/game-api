@@ -1,17 +1,14 @@
 import { Router } from 'express';
+import authController from '../controllers/authController.js';
 
 const router = Router();
 
-router.post('/register', (req, res) => res.send({ test: 'register' }));
+router.post('/register', authController.register);
 
-router.post('/authenticate', (req, res) => res.send({ test: 'authenticate' }));
+router.post('/authenticate', authController.authenticate);
 
-router.post('/forgot_password', (req, res) =>
-  res.send({ test: 'forgot_password' }),
-);
+router.post('/forgot_password', authController.forgotPassword);
 
-router.post('/reset_password', (req, res) =>
-  res.send({ test: 'reset_password' }),
-);
+router.post('/reset_password', authController.resetPassword);
 
 export default router;
