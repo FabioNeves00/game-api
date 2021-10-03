@@ -1,7 +1,9 @@
 import jwt from 'jsonwebtoken';
 import bcrypt from 'bcrypt';
+import crypto from 'crypto';
 import dotenv from 'dotenv';
 import { validationResult } from 'express-validator';
+import mailer from '../resources/nodemailer.js';
 import User from '../models/User.js';
 
 dotenv.config();
@@ -86,7 +88,38 @@ class AuthController {
   }
 
   async forgotPassword(req, res) {
-    return res.send({ route: 'forgotPassword' });
+    const { email } = req.body;
+
+    try {
+      const user = await User.findOne({ email });
+
+      if (!user) return res.status(400).send({ error: 'User not found.' });
+
+      const token = await crypto.randomBytes(20).toString('hex');
+
+      const now = new Date();
+      now.setHours(now.getHours() + 1);
+
+      await User.updateOne(
+        { _id: user.id },
+        { passwordResetToken: token, passwordResetExpires: now },
+      );
+
+      await mailer.sendMail({
+        subject: 'Esqueceu a senha?',
+        from: `0-0 <${process.env.USER_EMAIL}>`,
+        to: [user.email],
+        template: 'forgot_password',
+        context: { token },
+      });
+
+      return res.send();
+    } catch (err) {
+      console.log(err);
+      return res
+        .status(400)
+        .send({ error: 'Erro on forgot password, try again.' });
+    }
   }
 
   async resetPassword(req, res) {
